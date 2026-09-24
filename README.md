@@ -289,3 +289,81 @@ Then run `detections/v2_streamstats_sliding.spl` over the last 15 minutes, or wa
 
 **Samson Amosu** — Security Engineer (detection engineering, Splunk ES)
 [LinkedIn](https://www.linkedin.com/in/samson-amosu) · [GitHub](https://github.com/Olaoluwa-byte)
+
+---
+
+## P1.5 — Detection-as-code CI (v1.1)
+
+[![detection-tests](https://github.com/Olaoluwa-byte/splunk-ssh-bruteforce-detection/actions/workflows/detection-tests.yml/badge.svg)](https://github.com/Olaoluwa-byte/splunk-ssh-bruteforce-detection/actions/workflows/detection-tests.yml)
+
+Every push and pull request runs the detection against real attack logs in a disposable Splunk container. The build fails if detection behavior changes.
+
+### How it works
+
+1. GitHub Actions (`ubuntu-24.04`) starts `splunk/splunk`, pinned by digest to **Splunk 10.4.3 (build 4174a2deda5d)**, the same build as the lab instance.
+2. Each fixture is loaded into its own index with `splunk add oneshot` (sourcetype `linux_secure`). The harness waits until the indexed event count equals the fixture's line count. This is a pipeline-completeness check.
+3. The detection in `detections/ssh_bruteforce_password_spray.spl` runs **verbatim** (only the index is swapped) with `earliest_time=0`. A second copy, truncated at the threshold, measures peak attempts on fixtures that never alert.
+4. The harness asserts peak weighted attempts, alert row count, MITRE technique, and severity.
+
+### Test cases
+
+| Fixture | Raw lines | Weighted attempts | Peak (5m sliding) | Alert rows | Labels |
+|---|---|---|---|---|---|
+| `attack_run1.log` | 25 | 25 | 25 | 1 | T1110.003 / high |
+| `typos_collapsed.log` | 2 | **3** | 3 | 0 | — |
+| `typos_fixed.log` | 3 | 3 | 3 | 0 | — |
+
+### Why the collapsed-typo test matters
+
+rsyslog's `$RepeatedMsgReduction` logged 3 failed attempts on one SSH connection as **2 lines** (`message repeated 2 times`). A plain event count reports 2. The detection weights each event with `coalesce(repeat_count, 1)` and recovers all 3. If anyone removes the weighting, this test fails. For attackers who make several guesses per connection, the undercount can reach about 3x.
+
+The raw per-minute counts from `auth.log` also confirm the fixed-bucket evasion finding from Project 1: attack run 1 logged **19 events at 21:39 and 6 at 21:40**. A `bin span=5m` search splits the attack at 21:40 and misses the 6, while the sliding window catches all 25.
+
+### Fixture provenance
+
+Fixtures were extracted from `/var/log/auth.log` (ground truth), not from the attack script's intended counts, since later script runs logged 27 attempts each, not 25:
+
+```bash
+sudo zgrep -ahE "Failed password|message repeated" /var/log/auth.log* \
+  | tr -d '\000' | grep 'sshd\[' | grep "<minute window>" | sort
+```
+
+- `-a` / `tr -d '\000'`: `auth.log` contained NUL bytes, most likely from an unclean VM shutdown. They make grep treat the file as binary and print no lines.
+- `grep 'sshd\['`: drops `sudo` audit lines, which contain "Failed password" in the logged command line.
+- Line counts were checked before committing: 25 / 2 / 3.
+
+### Repo layout
+
+```
+detections/ssh_bruteforce_password_spray.spl   # source of truth for the saved alert
+tests/fixtures/*.log                           # raw auth.log extracts
+tests/start_splunk.sh                          # starts pinned Splunk container, waits for healthy
+tests/run_tests.py                             # ingest, search via REST, assert
+.github/workflows/detection-tests.yml          # CI
+```
+
+### Run locally
+
+```bash
+export SPLUNK_PASSWORD='<8+ chars>'
+./tests/start_splunk.sh && python3 tests/run_tests.py
+docker rm -f splunk-ci
+```
+
+### Operating rules
+
+- **The repo comes first.** Change the SPL here, wait for CI to pass, then update the saved search. (The deploy is manual for now; deploying through Splunk's REST API is planned.)
+- **Threshold coupling.** `THRESHOLD` in `run_tests.py` must match the `| where failures >= 10` line. If they don't match, the harness fails loudly rather than passing.
+- **Version parity.** The Splunk image is pinned by digest. Bump it in the same PR as any lab Splunk upgrade.
+- **MITRE labeling.** `distinct_users > 3` means T1110.003 (spraying); otherwise T1110.001. A spray against exactly 3 accounts is labeled T1110.001 / medium by design.
+- **Timezones.** The container runs in UTC and the lab in EDT, so `threshold_crossed` is intentionally not asserted.
+
+### Known limitations
+
+- Aggregation is per `src_ip`. A spray distributed across many source IPs is not covered.
+- The fixtures come from localhost (`127.0.0.1`) lab traffic.
+
+### Framework mapping
+
+- **MITRE ATT&CK:** T1110.001 Password Guessing, T1110.003 Password Spraying
+- **NIST SP 800-53:** AC-7 (Unsuccessful Logon Attempts), SI-4 (System Monitoring), CM-3 (Configuration Change Control, i.e. detection changes gated by CI)
