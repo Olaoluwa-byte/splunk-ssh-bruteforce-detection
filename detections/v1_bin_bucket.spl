@@ -1,0 +1,7 @@
+index=linux_auth sourcetype=linux_secure "Failed password"
+| rex "Failed password for (invalid user )?(?<user>\S+) from (?<src_ip>\S+) port"
+| bin _time span=5m
+| stats count AS failures dc(user) AS distinct_users values(user) AS users BY _time src_ip
+| where failures >= 10
+| eval mitre=if(distinct_users>3,"T1110.003","T1110.001"),
+       severity=if(distinct_users>3,"high","medium")

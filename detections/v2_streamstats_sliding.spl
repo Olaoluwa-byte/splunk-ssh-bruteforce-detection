@@ -1,0 +1,11 @@
+index=linux_auth sourcetype=linux_secure "Failed password"
+| rex "Failed password for (invalid user )?(?<user>\S+) from (?<src_ip>\S+) port"
+| rex "message repeated (?<repeat_count>\d+) times"
+| eval attempts=coalesce(repeat_count, 1)
+| sort 0 _time
+| streamstats time_window=5m sum(attempts) AS failures dc(user) AS distinct_users values(user) AS users BY src_ip
+| where failures >= 10
+| stats max(failures) AS peak_failures max(distinct_users) AS distinct_users values(users) AS users min(_time) AS threshold_crossed BY src_ip
+| eval mitre=if(distinct_users>3,"T1110.003","T1110.001"),
+       severity=if(distinct_users>3,"high","medium")
+| convert ctime(threshold_crossed)
