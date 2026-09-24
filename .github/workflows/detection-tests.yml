@@ -1,0 +1,35 @@
+name: detection-tests
+
+on:
+  push:
+    branches: [main, "p1.5-*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SPLUNK_IMAGE: splunk/splunk@sha256:cc3a3efe2509fa31f67d4aa20dde7118886babf9a0930f197ef996d513c44834  # Splunk 10.4.3 (build 4174a2deda5d)
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Generate throwaway Splunk password
+        run: |
+          PW="ci-$(openssl rand -hex 12)"
+          echo "::add-mask::$PW"
+          echo "SPLUNK_PASSWORD=$PW" >> "$GITHUB_ENV"
+
+      - name: Start Splunk
+        run: ./tests/start_splunk.sh
+
+      - name: Run detection tests
+        run: python3 tests/run_tests.py
+
+      - name: Splunk logs on failure
+        if: failure()
+        run: docker logs splunk-ci 2>&1 | tail -100
