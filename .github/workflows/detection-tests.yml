@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      SPLUNK_IMAGE: splunk/splunk:latest
+      SPLUNK_IMAGE: splunk/splunk@sha256:cc3a3efe2509fa31f67d4aa20dde7118886babf9a0930f197ef996d513c44834  # Splunk 10.4.3 (build 4174a2deda5d)
     steps:
       - uses: actions/checkout@v5
 

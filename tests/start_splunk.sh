@@ -2,7 +2,7 @@
 # Start a throwaway Splunk container for detection tests and wait until it's healthy.
 set -euo pipefail
 : "${SPLUNK_PASSWORD:?export SPLUNK_PASSWORD first (8+ chars)}"
-IMAGE="${SPLUNK_IMAGE:-splunk/splunk:latest}"
+IMAGE="${SPLUNK_IMAGE:-splunk/splunk@sha256:cc3a3efe2509fa31f67d4aa20dde7118886babf9a0930f197ef996d513c44834}"
 docker rm -f splunk-ci >/dev/null 2>&1 || true
 docker run -d --name splunk-ci -p 18089:8089 \
   -e SPLUNK_START_ARGS=--accept-license \
