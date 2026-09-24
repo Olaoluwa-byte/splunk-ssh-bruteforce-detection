@@ -36,8 +36,11 @@ def search(spl):
     return [r["result"] for r in rows if "result" in r]
 
 def cli(*args):
-    subprocess.run(["docker", "exec", "-u", "splunk", CONTAINER, "/opt/splunk/bin/splunk",
-                    *args, "-auth", f"admin:{PW}"], check=True, stdout=subprocess.DEVNULL)
+    r = subprocess.run(["docker", "exec", "-u", "splunk", CONTAINER, "/opt/splunk/bin/splunk",
+                        *args, "-auth", f"admin:{PW}"], capture_output=True, text=True)
+    if r.returncode != 0:  # show CLI output only when something actually failed
+        print(r.stdout, r.stderr, sep="\n")
+        raise AssertionError(f"splunk {' '.join(args)} failed ({r.returncode})")
 
 def ingest(fixture, index, expected):
     src = os.path.join(ROOT, "tests", "fixtures", fixture)

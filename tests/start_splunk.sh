@@ -12,7 +12,7 @@ docker run -d --name splunk-ci -p 18089:8089 \
 echo "Waiting for Splunk to become healthy (2-5 min)..."
 for _ in $(seq 1 60); do
   status=$(docker inspect -f '{{.State.Health.Status}}' splunk-ci 2>/dev/null || echo starting)
-  [ "$status" = "healthy" ] && { echo "Splunk is up"; exit 0; }
+  [ "$status" = "healthy" ] && { echo "Splunk is up"; docker exec -u splunk splunk-ci /opt/splunk/bin/splunk version || true; docker image inspect -f "{{index .RepoDigests 0}}" "$IMAGE" || true; exit 0; }
   sleep 10
 done
 echo "Splunk did not become healthy"; docker logs splunk-ci | tail -50; exit 1
