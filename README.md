@@ -290,11 +290,7 @@ Then run the detection over the last 15 minutes, or check **Activity → Trigger
 <details>
 <summary><b>J. Next steps (Project 2)</b></summary>
 
-- Kali attacker VM on a NAT Network (real remote `src_ip`)
-- Success-after-failure correlation (T1078)
-- Per-user aggregation for distributed spraying
-- Publickey/preauth failure coverage
-- CIM `Authentication` data model + `tstats`
+**Now live:** [splunk-ssh-account-compromise-detection](https://github.com/Olaoluwa-byte/splunk-ssh-account-compromise-detection) — success-after-failures (T1078) and key-only remote brute-force (T1110) detections, CI-tested.
 
 </details>
 
