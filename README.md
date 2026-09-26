@@ -182,15 +182,14 @@ Three runs of a 25-attempt script logged **25, 27, 27** failures (some attempts 
 
 | Test | Expected | Result |
 |---|---|---|
-| Ingestion | 25 events, 5 users × 5 | ✅ Exact |
-| Timestamp parsing | `_time` = raw ISO 8601 | ✅ To the millisecond |
-| True positive | Fires, T1110.003 / high | ✅ Peak 25, 5 users |
-| Scheduled alert | Triggered Alert, High | ✅ Fired 22:00 EDT |
-| False positive | 3 typos → no alert | ✅ Peak 2 |
+| Ingestion | 25 events, 5 users × 5 | Exact |
+| Timestamp parsing | `_time` = raw ISO 8601 | To the millisecond |
+| True positive | Fires, T1110.003 / high | Peak 25, 5 users |
+| Scheduled alert | Triggered Alert, High | Fired 22:00 EDT |
+| False positive | 3 typos → no alert | Peak 2 |
 
 ![Raw events](screenshots/01-raw-events.png)
 ![False positive test](screenshots/03-false-positive-test.png)
-![Triggered alert](screenshots/04-triggered-alert.png)
 
 </details>
 
