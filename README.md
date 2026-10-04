@@ -2,7 +2,7 @@
 
 [![detection-tests](https://github.com/Olaoluwa-byte/splunk-ssh-bruteforce-detection/actions/workflows/detection-tests.yml/badge.svg)](https://github.com/Olaoluwa-byte/splunk-ssh-bruteforce-detection/actions/workflows/detection-tests.yml)
 
-End-to-end detection engineering for SSH password guessing (T1110.001) and password spraying (T1110.003) in Splunk Enterprise — from raw log onboarding to a throttled scheduled alert, managed as code and regression-tested in CI.
+End-to-end detection engineering for SSH password guessing (T1110.001) and password spraying (T1110.003) in Splunk Enterprise — from raw log onboarding to a throttled scheduled alert, managed as code and regression-tested in CI. > **Extended by [Project 2: SSH account-compromise detection](https://github.com/Olaoluwa-byte/splunk-ssh-account-compromise-detection)**, which adds a real remote attacker (Kali over Tailscale) and detections for success-after-failures (T1078) and key-only/preauth brute force (T1110).
 
 ---
 
@@ -33,14 +33,14 @@ End-to-end detection engineering for SSH password guessing (T1110.001) and passw
 
 ### Coverage Gaps (known, prioritized)
 
-| Gap | Impact | Planned mitigation |
+| Gap | Impact | Status / planned mitigation |
 |---|---|---|
 | Distributed spray (many IPs, few attempts each) | Evades per-`src_ip` grouping | Aggregate by target user across sources |
 | Low-and-slow (<10 attempts per 5 min) | Never crosses threshold | 1–24h per-source aggregation |
-| Key-based SSH (remote password auth disabled) | Failures log as `publickey`, not `Failed password` — not counted | Extend base search to publickey/preauth failures |
-| Success after failures | Compromise not detected | Correlate `Accepted …` after a failure burst (T1078) |
+| Key-based SSH (remote password auth disabled) | Failures log as `publickey`, not `Failed password`, so they weren't counted | Closed in [Project 2](https://github.com/Olaoluwa-byte/splunk-ssh-account-compromise-detection): remote key-only/preauth detection (T1110) |
+| Success after failures | Compromise not detected | Closed in [Project 2](https://github.com/Olaoluwa-byte/splunk-ssh-account-compromise-detection): success-after-failures detection (T1078) |
 | Frustrated user (4 × 3 typos = 12) | Possible false positive | Higher threshold for single-user bursts |
-| Localhost-only attacker | Not a realistic remote source | Kali attacker VM (Project 2) |
+| Localhost-only attacker | Not a realistic remote source (remote SSH is key-only, so password attacks run from 127.0.0.1) | Closed in [Project 2](https://github.com/Olaoluwa-byte/splunk-ssh-account-compromise-detection): Kali attacker over Tailscale |
 
 ### Framework Mapping
 
